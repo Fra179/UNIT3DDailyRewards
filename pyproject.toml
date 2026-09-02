@@ -1,0 +1,11 @@
+[project]
+name = "unit3ddailyrewards"
+version = "0.1.0"
+description = "Daily reward claimer for UNIT3D based torrent trackers"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "apprise>=1.13.1",
+    "requests>=2.34.2",
+    "uncurl>=0.0.11",
+]
