@@ -9,9 +9,13 @@ trackers. Optionally sends a notification for each claim via
 
 1. For each tracker you want to claim from, you save a `curl` command in a
    `.txt` file inside a directory of your choice.
-2. The script parses each file into a `Website`, opens the claim page to grab the
-   CSRF token, and POSTs the claim.
-3. A success/error notification is sent through Apprise (if configured).
+2. The script parses each file into a `Website`, then automatically discovers
+   every currently running event on that tracker's event list page — no need
+   to configure events individually.
+3. For each event found, it opens the claim page to grab the CSRF token and
+   POSTs the claim.
+4. A success/error notification is sent through Apprise (if configured), including
+   the prize obtained for each claimed event.
 
 ## Installation
 
@@ -31,20 +35,22 @@ pip install apprise requests uncurl
 
 ### Curl commands
 
-Create a directory (e.g. `websites/`) and add one `.txt` file per tracker. The
-file name (without `.txt`) is used as the tracker name in logs and
-notifications.
+Create a directory (e.g. `websites/`) and add **one `.txt` file per website** (not
+per event — every currently running event on that website is discovered and
+claimed automatically). The file name (without `.txt`) is used as the tracker
+name in logs and notifications.
 
-The content of each `.txt` file must be the **Copy as cURL** copy of the request
-that loads the page of the prizes you want to claim.
+The content of each `.txt` file must be the **Copy as cURL** copy of a logged-in
+request to that website. Only the domain, cookies and `User-Agent` header are
+actually used, so the request can be taken from any page on the site — the
+**homepage is preferred** since it's simple and always available.
 
 To get it:
 
-1. Log in to the tracker and open the daily reward / event page that lists the
-   prizes to claim.
+1. Log in to the tracker and open any page (the homepage is preferred).
 2. Open your browser's dev tools → Network tab.
-3. Reload the page, right-click the request for that page (the document request
-   whose URL path ends with the event ID) and choose **Copy → Copy as cURL**.
+3. Reload the page, right-click the document request and choose
+   **Copy → Copy as cURL**.
 4. Paste it into `websites/<tracker-name>.txt`.
 
 The command must include your session cookies and `User-Agent` header.

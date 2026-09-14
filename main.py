@@ -46,14 +46,16 @@ def main():
 
         try:
             claim = RewardsClaimer(website, dry_run=args.dry_run)
-            reward = claim.claim_reward()
+            rewards = claim.claim_rewards()
 
             title = f"Reward Claimed from {website.name}"
+            description = ""
 
-            if reward:
-                description = f"Successfully claimed {reward} from {website.name}"
-            else:
-                description = f"Successfully claimed reward from {website.name}"
+            for (event, reward) in rewards:
+                if reward:
+                    description += f"Successfully claimed {reward} from event {event.name} (ID: {event.event_id})\n"
+                else:
+                    description += f"Successfully claimed reward from event {event.name} (ID: {event.event_id}), but no prize message was found.\n"
 
         except Exception as e:
             logger.error(f"Error occurred while requesting rewards for {website.name}: {e}")

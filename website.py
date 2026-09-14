@@ -8,8 +8,6 @@ from os import listdir, path
 @dataclass
 class Website:
     base_url: str
-    claim_page_url: str
-    event_id: int
     cookies: dict[str, str]
     user_agent: str
     name: str = "Unnamed Website"
@@ -29,33 +27,54 @@ class Website:
         command = re.sub(r'\\\s*\n', ' ', command)
         curl_parsed = uncurl.parse_context(command)
 
-        claim_page_url = curl_parsed.url
         parsed_url = urlsplit(curl_parsed.url)
         base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-        event_id = parsed_url.path.split('/')[-1]  # Assuming the event_id is the last part of the path
         user_agent = curl_parsed.headers.get('User-Agent', '')
 
-        return Website(name=name, base_url=base_url, claim_page_url=claim_page_url, event_id=int(event_id), cookies=curl_parsed.cookies, user_agent=user_agent)
+        return Website(name=name, base_url=base_url, cookies=curl_parsed.cookies, user_agent=user_agent)
 
-    @property
-    def claim_url(self) -> str:
+    def claim_url(self, event_id: int) -> str:
         """
         Construct the claim URL based on the base URL and event ID.
 
         Returns:
             str: The constructed claim URL.
         """
-        return f"{self.base_url}/events/{self.event_id}/claims"
+        return f"{self.base_url}/events/{event_id}/claims"
+
+    def claim_page_url(self, event_id: int) -> str:
+        """
+        Construct the claim page URL based on the base URL and event ID.
+
+        Returns:
+            str: The constructed claim page URL.
+        """
+        return f"{self.base_url}/events/{event_id}/"
+
+    @property
+    def event_list_url(self) -> str:
+        """
+        Construct the event list URL based on the base URL.
+
+        Returns:
+            str: The constructed event list URL.
+        """
+        return f"{self.base_url}/events/"
 
     def __str__(self) -> str:
         _return = f"Website: {self.name}\n"
         _return += f"Base URL: {self.base_url}\n"
-        _return += f"Claim Page URL: {self.claim_page_url}\n"
-        _return += f"Event ID: {self.event_id}\n"
+        _return += f"Event List URL: {self.event_list_url}\n"
         _return += f"Cookies: {self.cookies}\n"
-        _return += f"Claim URL: {self.claim_url}\n"
         return _return
 
+class Event:
+    def __init__(self, event_id: int, name: str):
+        self.event_id = event_id
+        self.name = name
+
+    def __str__(self) -> str:
+        return f"Event ID: {self.event_id}, Name: {self.name}"
 
 def parse_websites_from_dir(directory: str) -> list[Website]:
     """

@@ -1,11 +1,9 @@
+from website import Website, Event
+from urllib.parse import urlsplit
+from typing import Optional
+import requests
 import logging
 import re
-from typing import Optional
-from urllib.parse import urlsplit
-
-import requests
-
-from website import Website
 
 class MissingCSRFTokenError(Exception):
     def __init__(self, message="CSRF token not found in the claim page."):
@@ -56,11 +54,10 @@ class RewardsClaimer:
         """
         return self.session.post(url, data=data)
     
-    def __dry_claim(self) -> None:
-        print(f"Dry run: Would claim reward from {self.website.name} at {self.website.claim_url}")
-        return None
+    def __dry_claim(self, event: Event) -> None:
+        print(f"Dry run: Would claim reward from {self.website.name} at {self.website.claim_url(event.event_id)} for event '{event.name}' (ID: {event.event_id})")
 
-    def __real_claim(self) -> Optional[str]:
+    def __real_claim(self, event: Event) -> Optional[str]:
         """
         Claim the reward from the specified website.
 
@@ -70,7 +67,7 @@ class RewardsClaimer:
         """
 
         # get the crsf token from the claim page
-        response = self._get(self.website.claim_page_url)
+        response = self._get(self.website.claim_page_url(event.event_id))
         if response.status_code != 200:
             raise WrongStatusCodeError(response.status_code)
 
@@ -84,7 +81,7 @@ class RewardsClaimer:
         csrf_token = match.group(1)
 
         # submit the claim
-        response = self._post(self.website.claim_url, _token=csrf_token)
+        response = self._post(self.website.claim_url(event.event_id), _token=csrf_token)
 
         if response.status_code not in [200, 302]:  # Assuming 200 OK or 302 Found are valid responses
             raise WrongStatusCodeError(response.status_code)
@@ -98,9 +95,47 @@ class RewardsClaimer:
         last_prize = next(filter(lambda x: x.strip() != "Check back later!", response_message_matches), None)
         return last_prize
 
-    def claim_reward(self) -> Optional[str]:
+    def _list_events(self) -> list[Event]:
+        """
+        List all events available on the website.
+
+        Returns:
+            list[Event]: A list of Event instances representing the available events.
+        """
+        response = self._get(self.website.event_list_url)
+        if response.status_code != 200:
+            raise WrongStatusCodeError(response.status_code)
+
+        # Event IDs are in the format /events/<event_id>
+        event_id_pattern = re.compile(rf'<a href="{self.website.base_url}/events/(\d+)">\s*(.*?)\s*</a>')
+
+        events = []
+        for match in event_id_pattern.finditer(response.text):
+            event_id = int(match.group(1))
+            event_name = match.group(2).strip()
+            events.append(Event(event_id=event_id, name=event_name))
+
+        return events
+
+
+    def claim_rewards(self) -> list[tuple[Event, Optional[str]]]:
         """
         Claim the reward from the website. If dry_run is True, it will only print the action without performing it.
+
+        Returns:
+            list[tuple[Event, Optional[str]]]: A list of tuples, each containing an Event instance and the corresponding prize message (or None if no prize message was found or if it was a dry run).
         """
 
-        return self.__dry_claim() if self.dry_run else self.__real_claim()
+        events = self._list_events()
+
+        results = []
+
+        for event in events:
+            if self.dry_run:
+                prize_message = self.__dry_claim(event) # type: ignore[func-returns-value] # It's expected behaviour for the dry claim to return None
+            else:
+                prize_message = self.__real_claim(event)
+                
+            results.append((event, prize_message))
+
+        return results
