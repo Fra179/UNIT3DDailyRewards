@@ -1,0 +1,2 @@
+tgram://bot_token_1/chat_id_1
+tgram://bot_token_2/chat_id_2

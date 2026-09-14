@@ -1,5 +1,6 @@
 import logging
 import re
+from typing import Optional
 from urllib.parse import urlsplit
 
 import requests
@@ -55,10 +56,11 @@ class RewardsClaimer:
         """
         return self.session.post(url, data=data)
     
-    def __dry_claim(self):
+    def __dry_claim(self) -> None:
         print(f"Dry run: Would claim reward from {self.website.name} at {self.website.claim_url}")
+        return None
 
-    def __real_claim(self):
+    def __real_claim(self) -> Optional[str]:
         """
         Claim the reward from the specified website.
 
@@ -87,11 +89,18 @@ class RewardsClaimer:
         if response.status_code not in [200, 302]:  # Assuming 200 OK or 302 Found are valid responses
             raise WrongStatusCodeError(response.status_code)
 
-    def claim_reward(self):
+        prize_messaage = r"<i class=\"events__prize-message\">\s*(.*?)\s*</i>"
+        response_message_matches = re.findall(prize_messaage, response.text)[::-1]
+
+        if not response_message_matches:
+            return None
+        
+        last_prize = next(filter(lambda x: x.strip() != "Check back later!", response_message_matches), None)
+        return last_prize
+
+    def claim_reward(self) -> Optional[str]:
         """
         Claim the reward from the website. If dry_run is True, it will only print the action without performing it.
         """
-        if self.dry_run:
-            self.__dry_claim()
-        else:
-            self.__real_claim()
+
+        return self.__dry_claim() if self.dry_run else self.__real_claim()

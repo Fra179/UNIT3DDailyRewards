@@ -46,10 +46,14 @@ def main():
 
         try:
             claim = RewardsClaimer(website, dry_run=args.dry_run)
-            claim.claim_reward()
+            reward = claim.claim_reward()
 
             title = f"Reward Claimed from {website.name}"
-            description = f"Successfully claimed reward from {website.name}"
+
+            if reward:
+                description = f"Successfully claimed {reward} from {website.name}"
+            else:
+                description = f"Successfully claimed reward from {website.name}"
 
         except Exception as e:
             logger.error(f"Error occurred while requesting rewards for {website.name}: {e}")
